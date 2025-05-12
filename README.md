@@ -120,6 +120,67 @@ A: Some systems have quotas or disk space limitations. Check your available spac
 
 For more troubleshooting help, please [open an issue](https://github.com/nebstudio/Rootless-DevBox/issues).
 
+## Uninstalling
+
+If you need to remove Rootless-DevBox from your system, you have two options:
+
+### Option 1: Using the Uninstall Script
+
+We provide an uninstall script that can remove most components:
+
+```bash
+# Download the uninstaller
+curl -o rootless-devbox-uninstaller.sh https://raw.githubusercontent.com/nebstudio/Rootless-DevBox/main/uninstall.sh
+
+# Make it executable
+chmod +x rootless-devbox-uninstaller.sh
+
+# Run the uninstaller
+./rootless-devbox-uninstaller.sh
+```
+
+### Option 2: Manual Uninstallation (Recommended)
+
+For more control over the uninstallation process, you can manually remove components:
+
+1. **Remove the installed binaries**:
+   ```bash
+   rm -f ~/.local/bin/devbox
+   rm -f ~/.local/bin/nix-chroot
+   rm -f ~/.local/bin/nix-user-chroot
+   ```
+
+2. **Clean up the Nix directory** (optional, removes all Nix packages):
+   ```bash
+   rm -rf ~/.nix
+   ```
+
+3. **⚠️ IMPORTANT: Edit your shell configuration file** (`~/.bashrc`, `~/.zshrc`, etc.):
+   
+   **Strongly recommended**: Manually inspect and remove the following additions rather than relying on automated cleanup:
+   
+   - Remove the PATH modification line:
+     ```bash
+     export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox
+     ```
+   
+   - Remove the PS1 prompt modification block:
+     ```bash
+     # Rootless-DevBox nix-chroot environment indicator
+     if [ "$NIX_CHROOT" = "1" ]; then
+       PS1="(nix-chroot) \[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ "
+     fi
+     ```
+
+   After editing, apply the changes:
+   ```bash
+   source ~/.bashrc  # or your specific shell config file
+   ```
+
+> **Note**: While the uninstall script attempts to safely edit your shell configuration file, **manually inspecting and removing the specific lines** is safest to prevent unintended modifications to your environment variables.
+
+After uninstallation, you may need to open a new terminal session for all changes to take effect.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
