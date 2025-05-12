@@ -164,21 +164,19 @@ main() {
     print_warning "Nix often sets special permissions (immutable attributes) on its store files,"
     print_warning "which might prevent normal removal even with 'rm -rf'."
     if confirm_action "Do you want to attempt to remove the directory ${nix_dir}?"; then
+      echo_color "$CYAN" "Attempting to reset permissions for ${nix_dir} (this may take a while)..."
+      find "${nix_dir}" -print0 | xargs -0 -P"$(nproc)" -n100 chmod 777 2>/dev/null
       echo_color "$CYAN" "Attempting to remove ${nix_dir}..."
       # Attempt removal, suppressing stderr to avoid spamming permission errors on individual files
       if rm -rf "${nix_dir}" 2>/dev/null; then
-        # If rm -rf returns 0, it believes it succeeded.
-        # We can add an extra check to be absolutely sure the directory is gone.
         if [ ! -d "${nix_dir}" ]; then
             print_success "Successfully removed directory: ${nix_dir}"
         else
-            # This case should be rare if rm -rf returned 0, but indicates partial failure.
             print_warning "rm -rf command reported success, but the directory ${nix_dir} or some of its contents still exist."
             echo_color "$YELLOW" "This can happen if some files had immutable attributes that 'rm -rf' could not override without sudo."
             echo_color "$YELLOW" "Please check manually. You might need to use 'sudo' as described below if files remain."
         fi
       else
-        # rm -rf failed, likely due to permissions on files with immutable attributes
         print_error_msg "Failed to completely remove directory: ${nix_dir}."
         echo_color "$YELLOW" "This is common with Nix stores as files inside '${nix_dir}/store' often have immutable attributes."
         echo_color "$YELLOW" "To completely remove it, you might need to use 'sudo' or other manual steps:"

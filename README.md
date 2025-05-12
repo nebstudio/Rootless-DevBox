@@ -17,6 +17,7 @@ Rootless-DevBox is a project that enables users to install and use [Devbox](http
 - 🚀 **Easy Setup**: One script to set up everything automatically
 - 💻 **Cross-Platform**: Works on various Linux distributions and architectures
 - 🔒 **Safe**: Only modifies your user environment, not system files
+- 🌏 **China Network Friendly**: The script can automatically configure Nix to use Tsinghua University mirrors for users in mainland China or other network-restricted environments
 
 ## Quick Start
 

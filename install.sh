@@ -102,12 +102,36 @@ create_temp_dir() {
   mktemp -d 2>/dev/null || print_error "Failed to create temporary directory"
 }
 
+# Set Nix mirror if needed
+set_nix_mirror_if_needed() {
+  echo ""
+  echo_color "$YELLOW" "Are you located in mainland China and want to use the Tsinghua Nix mirror for faster downloads? [y/N]"
+  read -r use_mirror
+  use_mirror=${use_mirror:-n}
+  if [[ "$use_mirror" =~ ^[Yy]$ ]]; then
+    local nix_conf_dir="${HOME}/.config/nix"
+    local nix_conf_file="${nix_conf_dir}/nix.conf"
+    mkdir -p "$nix_conf_dir"
+    if grep -q '^substituters =' "$nix_conf_file" 2>/dev/null; then
+      sed -i 's|^substituters =.*|substituters = https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store https://cache.nixos.org/|' "$nix_conf_file"
+    else
+      echo "substituters = https://mirrors.tuna.tsinghua.edu.cn/nix-channels/store https://cache.nixos.org/" >> "$nix_conf_file"
+    fi
+    echo_color "$GREEN" "Configured Nix to use Tsinghua mirror."
+    echo "You can edit ${nix_conf_file} to adjust this setting."
+  fi
+}
+
 # Main installation process
 main() {
   local local_bin_dir="${HOME}/.local/bin"
   local devbox_path="${local_bin_dir}/devbox"
   local nix_chroot_path="${local_bin_dir}/nix-chroot"
   local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
+  local nix_dir="${HOME}/.nix"
+  local nix_user_chroot_version="1.2.2"
+  local arch=$(get_architecture)
+  local temp_dir=$(create_temp_dir)
 
   if [ -x "$devbox_path" ] && [ -x "$nix_chroot_path" ] && [ -x "$nix_user_chroot_path" ]; then
     echo_color "$GREEN" "All components are already installed!"
@@ -115,19 +139,14 @@ main() {
     exit 0
   fi
 
-  local nix_dir="${HOME}/.nix"
-  local nix_user_chroot_version="1.2.2"
-  local arch=$(get_architecture)
-  local temp_dir=$(create_temp_dir)
-  
   echo_color "$BOLD" "Rootless-DevBox Installer"
   echo "This script will install DevBox in a rootless environment."
   echo "It will make changes only to your user environment and will not require root permissions."
   echo ""
-  
+
   # Check if the system supports user namespaces (required for nix-user-chroot)
   check_user_namespace_support
-  
+
   # Step 1: Create ~/.local/bin directory
   print_step "Creating local bin directory"
   if [ -d "$local_bin_dir" ]; then
@@ -137,44 +156,52 @@ main() {
     print_success "Created directory $local_bin_dir"
   fi
 
-  # Create Nix directory if it doesn't exist
-  print_step "Creating Nix directory ${nix_dir}"
-  if [ -d "$nix_dir" ]; then
-    echo "Directory $nix_dir already exists."
-  else
-    mkdir -p "$nix_dir"
-    print_success "Created directory $nix_dir"
-  fi
-  
   # Step 2: Download nix-user-chroot
   print_step "Downloading nix-user-chroot"
   local nix_user_chroot_filename="nix-user-chroot-bin-${nix_user_chroot_version}-${arch}"
   local nix_user_chroot_url="https://github.com/nix-community/nix-user-chroot/releases/download/${nix_user_chroot_version}/${nix_user_chroot_filename}"
   local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
-  
+
   echo "Architecture detected: ${arch}"
   echo "Downloading from: ${nix_user_chroot_url}"
-  
+
   if ! download_file "$nix_user_chroot_url" "$nix_user_chroot_path"; then
     print_error "Failed to download nix-user-chroot. Please check your internet connection and try again."
   fi
-  
+
   chmod +x "$nix_user_chroot_path"
   print_success "nix-user-chroot downloaded and made executable"
-  
-  # Step 3: Create nix-chroot script
+
+  # Step 3: Create ~/.nix directory (with permissions)
+  print_step "Creating Nix data directory (~/.nix)"
+  if [ -d "$nix_dir" ]; then
+    chmod 0755 "$nix_dir"
+    echo "Directory $nix_dir already exists. Set permissions to 0755."
+  else
+    mkdir -m 0755 "$nix_dir"
+    print_success "Created directory $nix_dir with permissions 0755"
+  fi
+
+  # Step 4: Install Nix in rootless mode using nix-user-chroot
+  print_step "Installing Nix in rootless mode"
+  if [ ! -d "${HOME}/.nix-profile" ]; then
+    "$nix_user_chroot_path" "$nix_dir" bash -c "curl -L https://nixos.org/nix/install | bash"
+    print_success "Nix installed in rootless mode"
+  else
+    echo "Nix already installed in ~/.nix-profile, skipping Nix installation."
+  fi
+
+  # Step 5: Create nix-chroot script
   print_step "Installing nix-chroot script"
   local nix_chroot_path_in_bin="${local_bin_dir}/nix-chroot"
-  
   cat > "$nix_chroot_path_in_bin" <<EOF
 #!/bin/bash
 exec \${HOME}/.local/bin/nix-user-chroot \${HOME}/.nix env NIX_CHROOT=1 bash -l
 EOF
-  
   chmod +x "$nix_chroot_path_in_bin"
   print_success "Created nix-chroot script at ${nix_chroot_path_in_bin}"
-  
-  # Step 4: Install DevBox (create install script)
+
+  # Step 6: Continue with DevBox installation process
   print_step "Preparing DevBox installation"
   
   local devbox_install_script="${temp_dir}/devbox_install_user.sh"
@@ -404,6 +431,9 @@ EOF
   chmod +x "$permanent_devbox_install_script"
   print_success "Created DevBox installation script: ${devbox_install_script}"
   print_success "Created permanent backup at: ${permanent_devbox_install_script}"
+  
+  # Step 7: Set Nix mirror if needed
+  set_nix_mirror_if_needed
   
   echo ""
   echo_color "$BOLD" "Next: Activate Nix Environment and Install DevBox"
