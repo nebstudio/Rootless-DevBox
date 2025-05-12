@@ -2,9 +2,9 @@
 
 A simple, automated solution for installing Devbox in a rootless environment without requiring sudo or root privileges.
 
-![GitHub](https://img.shields.io/github/license/nebstudio/Rootless-DevBox)
-![GitHub stars](https://img.shields.io/github/stars/nebstudio/Rootless-DevBox)
-![GitHub issues](https://img.shields.io/github/issues/nebstudio/Rootless-DevBox)
+[![GitHub License](https://img.shields.io/github/license/nebstudio/Rootless-DevBox)](https://github.com/nebstudio/Rootless-DevBox/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/nebstudio/Rootless-DevBox?style=social)](https://github.com/nebstudio/Rootless-DevBox/stargazers)
+[![GitHub Issues](https://img.shields.io/github/issues/nebstudio/Rootless-DevBox)](https://github.com/nebstudio/Rootless-DevBox/issues)
 
 ## What is Rootless-DevBox?
 
