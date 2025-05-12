@@ -20,13 +20,12 @@ Rootless-DevBox is a project that enables users to install and use [Devbox](http
 
 ## Quick Start
 
-~~Simply run this command in your terminal(❌Unavailable):
+> **Note:**  
+> The installation script is intentionally interactive and will prompt you for input at several steps.  
+> This is by design: it allows you to make choices during installation, ensures you understand each step, and gives you flexibility to adapt the process to your environment.  
+> Please do not be discouraged by the extra prompts—this approach is meant to maximize compatibility and user control, especially in diverse or restricted Linux environments.
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/nebstudio/Rootless-DevBox/main/install.sh | bash
-```
-
-Or download and run manually(✅):
+Simply run this command in your terminal:
 
 ```bash
 # Download the installer

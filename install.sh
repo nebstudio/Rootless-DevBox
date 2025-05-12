@@ -105,6 +105,16 @@ create_temp_dir() {
 # Main installation process
 main() {
   local local_bin_dir="${HOME}/.local/bin"
+  local devbox_path="${local_bin_dir}/devbox"
+  local nix_chroot_path="${local_bin_dir}/nix-chroot"
+  local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
+
+  if [ -x "$devbox_path" ] && [ -x "$nix_chroot_path" ] && [ -x "$nix_user_chroot_path" ]; then
+    echo_color "$GREEN" "All components are already installed!"
+    echo "You can use 'nix-chroot' to enter the environment and 'devbox' directly."
+    exit 0
+  fi
+
   local nix_dir="${HOME}/.nix"
   local nix_user_chroot_version="1.2.2"
   local arch=$(get_architecture)
@@ -168,6 +178,7 @@ EOF
   print_step "Preparing DevBox installation"
   
   local devbox_install_script="${temp_dir}/devbox_install_user.sh"
+  local permanent_devbox_install_script="${HOME}/devbox_install_user.sh" 
   
   cat > "$devbox_install_script" <<'EOF'
 #!/bin/bash
@@ -389,35 +400,70 @@ main "$@"
 EOF
   
   chmod +x "$devbox_install_script"
+  cp "$devbox_install_script" "$permanent_devbox_install_script"
+  chmod +x "$permanent_devbox_install_script"
   print_success "Created DevBox installation script: ${devbox_install_script}"
+  print_success "Created permanent backup at: ${permanent_devbox_install_script}"
   
   echo ""
   echo_color "$BOLD" "Next: Activate Nix Environment and Install DevBox"
+  echo_color "$BOLD" "⚠️  IMPORTANT: Installation requires TWO steps! ⚠️"
   echo "You now need to enter the nix-chroot environment and then run the DevBox installer script."
   echo "The commands are:"
   echo_color "$YELLOW" "    1. ${local_bin_dir}/nix-chroot"
-  echo_color "$YELLOW" "    2. (Inside nix-chroot) ${devbox_install_script}"
+  echo_color "$YELLOW" "    2. (Inside nix-chroot) ${permanent_devbox_install_script}"
   echo ""
   echo "Would you like this script to attempt to run '${local_bin_dir}/nix-chroot' for you now? [Y/n]"
-  echo_color "$GREY" "(If you choose yes, after nix-chroot starts, you MUST MANUALLY run the second command: ${devbox_install_script})"
-  read -r response
+  echo_color "$GREY" "(If you choose yes, after nix-chroot starts, you MUST MANUALLY run the second command shown above)"
+  
+  if [ -t 0 ]; then
+    read -r response
+  else
+    response="y"
+    echo "Non-interactive mode detected. Defaulting to 'y'."
+  fi
+  
   response=${response:-y}
   
   if [[ "$response" =~ ^[Yy] ]]; then
     echo ""
     echo_color "$CYAN" "Attempting to start ${local_bin_dir}/nix-chroot..."
-    echo "Once the new shell starts (you might see a prompt like '(nix-chroot) ...'),"
-    echo "remember to run the following command MANUALLY:"
-    echo_color "$YELLOW" "    ${devbox_install_script}"
+    echo_color "$BOLD$RED" "⚠️  CRITICAL STEP: After nix-chroot starts, you MUST run: ⚠️"
+    echo_color "$YELLOW$BOLD" "    ${permanent_devbox_install_script}"
     echo ""
+    echo "Without this step, devbox will NOT be installed!"
     echo "Press Enter to continue and execute ${local_bin_dir}/nix-chroot..."
     read -r
     if [ ! -x "${local_bin_dir}/nix-chroot" ]; then
         print_error "${local_bin_dir}/nix-chroot not found or not executable. Please check previous steps."
     fi
-    exec "${local_bin_dir}/nix-chroot" 
-    print_error "Failed to execute ${local_bin_dir}/nix-chroot. Please run it manually as instructed above."
-    exit 1 
+    
+    if ! grep -qF 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' ~/.bashrc; then
+      echo '' >> ~/.bashrc
+      echo '# Added by Rootless-DevBox installer' >> ~/.bashrc
+      echo 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' >> ~/.bashrc
+      echo "Added ~/.local/bin to PATH in ~/.bashrc"
+    fi
+    
+    if ! grep -qF '# Rootless-DevBox nix-chroot environment indicator' ~/.bashrc; then
+      echo '' >> ~/.bashrc 
+      cat >> ~/.bashrc <<EOF
+# Rootless-DevBox nix-chroot environment indicator
+if [ "\$NIX_CHROOT" = "1" ]; then
+  PS1="(nix-chroot) \[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\\\$ "
+fi
+EOF
+      echo "Added nix-chroot environment indicator to ~/.bashrc"
+    fi
+    
+    echo_color "$YELLOW" "Environment variables configured. Now installing DevBox automatically in nix-chroot environment..."
+    "${local_bin_dir}/nix-user-chroot" "${nix_dir}" env NIX_CHROOT=1 bash "${permanent_devbox_install_script}"
+    if [ -x "${local_bin_dir}/devbox" ]; then
+      print_success "DevBox installed successfully! You can now use 'nix-chroot' and 'devbox'."
+    else
+      print_error "DevBox installation failed. Please check the output above or try manual installation."
+    fi
+    exit 0
   else
     echo ""
     echo_color "$YELLOW" "Okay, proceeding with manual installation guidance."
@@ -427,7 +473,7 @@ EOF
     echo_color "$CYAN" "     ${local_bin_dir}/nix-chroot"
     echo "2. Once inside the nix-chroot environment (e.g., you see '(nix-chroot)' in your prompt),"
     echo "   run the DevBox installer script:"
-    echo_color "$CYAN" "     ${devbox_install_script}"
+    echo_color "$CYAN" "     ${permanent_devbox_install_script}"
     echo ""
     echo "After you have successfully completed BOTH steps above, would you like this script"
     echo "to attempt to configure your ~/.bashrc for future use? (Adds ${local_bin_dir} to PATH and a prompt indicator) [y/N]"
@@ -479,6 +525,16 @@ EOF
       echo "to your ~/.bashrc (or equivalent shell configuration file)."
     fi
   fi
+  
+  echo ""
+  echo_color "$YELLOW" "⚠️  Verify Installation ⚠️"
+  echo "After installation, please confirm the following files exist:"
+  echo "1. ${local_bin_dir}/nix-user-chroot - Nix user chroot binary"
+  echo "2. ${local_bin_dir}/nix-chroot - Script to enter Nix environment"
+  echo "3. ${local_bin_dir}/devbox - DevBox binary (after completing step 2)"
+  echo ""
+  echo "If devbox doesn't exist, please enter the nix-chroot environment and run:"
+  echo_color "$CYAN" "${permanent_devbox_install_script}"
   
   echo ""
   echo "If you encounter any issues, please report them at: https://github.com/nebstudio/Rootless-DevBox/issues"
