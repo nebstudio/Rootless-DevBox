@@ -75,6 +75,19 @@ main() {
   local local_bin_dir="${HOME}/.local/bin"
   local nix_dir="${HOME}/.nix"
   local bashrc_file="${HOME}/.bashrc"
+  local devbox_path="${local_bin_dir}/devbox"
+  local nix_chroot_path="${local_bin_dir}/nix-chroot"
+  local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
+
+  # Check if any component is installed
+  if [ ! -f "$devbox_path" ] && \
+     [ ! -f "$nix_chroot_path" ] && \
+     [ ! -f "$nix_user_chroot_path" ] && \
+     [ ! -d "$nix_dir" ] && \
+     ! grep -qE '(# Added by Rootless-DevBox installer|export PATH="\$HOME/\.local/bin:\$PATH" # Added by Rootless-DevBox|# Rootless-DevBox nix-chroot environment indicator)' "$bashrc_file" 2>/dev/null; then
+    echo_color "$YELLOW" "No Rootless-DevBox components found. Uninstallation is not required."
+    exit 0
+  fi
 
   echo_color "$BOLD" "Rootless-DevBox Uninstaller"
   echo "This script will attempt to remove DevBox and related components"
@@ -97,7 +110,6 @@ main() {
   if [ ! -f "$bashrc_file" ]; then
     print_warning "${bashrc_file} not found. Skipping .bashrc modifications."
   else
-    # Check if any of our known lines/blocks exist before attempting modification
     if grep -qE '(# Added by Rootless-DevBox installer|export PATH="\$HOME/\.local/bin:\$PATH" # Added by Rootless-DevBox|# Rootless-DevBox nix-chroot environment indicator)' "$bashrc_file"; then
       local bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
       echo "Modifying ${bashrc_file} to remove Rootless-DevBox configurations."
@@ -149,11 +161,35 @@ main() {
   if [ -d "$nix_dir" ]; then
     echo "The directory ${nix_dir} was used by Rootless-DevBox for Nix."
     echo "This directory may contain cached Nix derivations and other Nix-related data."
-    if confirm_action "Do you want to remove the directory ${nix_dir}?"; then
-      if rm -rf "${nix_dir}"; then
-        print_success "Removed directory: ${nix_dir}"
+    print_warning "Nix often sets special permissions (immutable attributes) on its store files,"
+    print_warning "which might prevent normal removal even with 'rm -rf'."
+    if confirm_action "Do you want to attempt to remove the directory ${nix_dir}?"; then
+      echo_color "$CYAN" "Attempting to remove ${nix_dir}..."
+      # Attempt removal, suppressing stderr to avoid spamming permission errors on individual files
+      if rm -rf "${nix_dir}" 2>/dev/null; then
+        # If rm -rf returns 0, it believes it succeeded.
+        # We can add an extra check to be absolutely sure the directory is gone.
+        if [ ! -d "${nix_dir}" ]; then
+            print_success "Successfully removed directory: ${nix_dir}"
+        else
+            # This case should be rare if rm -rf returned 0, but indicates partial failure.
+            print_warning "rm -rf command reported success, but the directory ${nix_dir} or some of its contents still exist."
+            echo_color "$YELLOW" "This can happen if some files had immutable attributes that 'rm -rf' could not override without sudo."
+            echo_color "$YELLOW" "Please check manually. You might need to use 'sudo' as described below if files remain."
+        fi
       else
-        print_error_msg "Failed to remove directory: ${nix_dir}. Please remove it manually if desired."
+        # rm -rf failed, likely due to permissions on files with immutable attributes
+        print_error_msg "Failed to completely remove directory: ${nix_dir}."
+        echo_color "$YELLOW" "This is common with Nix stores as files inside '${nix_dir}/store' often have immutable attributes."
+        echo_color "$YELLOW" "To completely remove it, you might need to use 'sudo' or other manual steps:"
+        echo_color "$YELLOW" "  Option 1 (if you have sudo access):"
+        echo_color "$YELLOW" "    1. sudo chattr -R -i \"${nix_dir}\"  (Removes immutable attribute)"
+        echo_color "$YELLOW" "    2. sudo rm -rf \"${nix_dir}\""
+        echo_color "$YELLOW" "  Option 2 (if nix-chroot is still usable and was not removed):"
+        echo_color "$YELLOW" "    1. Enter the environment (e.g., ~/.local/bin/nix-chroot)"
+        echo_color "$YELLOW" "    2. Run Nix garbage collection: nix-store --gc"
+        echo_color "$YELLOW" "    3. Exit nix-chroot, then try again: rm -rf \"${nix_dir}\""
+        echo_color "$YELLOW" "If you lack sudo access and Option 2 doesn't work, some files or the directory may remain."
       fi
     else
       echo "Skipped removal of ${nix_dir}."
