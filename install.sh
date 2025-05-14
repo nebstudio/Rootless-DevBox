@@ -62,7 +62,8 @@ For more information, see: https://github.com/nix-community/nix-user-chroot"
 
 # Detect system architecture
 get_architecture() {
-  local arch=$(uname -m)
+  local arch
+  arch=$(uname -m)
 
   case "$arch" in
     x86_64)
@@ -130,8 +131,10 @@ main() {
   local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
   local nix_dir="${HOME}/.nix"
   local nix_user_chroot_version="1.2.2"
-  local arch=$(get_architecture)
-  local temp_dir=$(create_temp_dir)
+  local arch
+  local temp_dir
+  arch=$(get_architecture)
+  temp_dir=$(create_temp_dir)
 
   if [ -x "$devbox_path" ] && [ -x "$nix_chroot_path" ] && [ -x "$nix_user_chroot_path" ]; then
     echo_color "$GREEN" "All components are already installed!"

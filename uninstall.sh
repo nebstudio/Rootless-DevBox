@@ -113,7 +113,8 @@ main() {
   else
     # shellcheck disable=SC2016
     if grep -qE '(# Added by Rootless-DevBox installer|export PATH="\$HOME/\.local/bin:\$PATH" # Added by Rootless-DevBox|# Rootless-DevBox nix-chroot environment indicator)' "$bashrc_file"; then
-      local bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
+      local bashrc_backup
+      bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
       echo "Modifying ${bashrc_file} to remove Rootless-DevBox configurations."
       echo "Backing up current ${bashrc_file} to ${bashrc_backup}"
       if cp "${bashrc_file}" "${bashrc_backup}"; then
