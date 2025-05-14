@@ -111,6 +111,7 @@ main() {
   if [ ! -f "$bashrc_file" ]; then
     print_warning "${bashrc_file} not found. Skipping .bashrc modifications."
   else
+    # shellcheck disable=SC2016
     if grep -qE '(# Added by Rootless-DevBox installer|export PATH="\$HOME/\.local/bin:\$PATH" # Added by Rootless-DevBox|# Rootless-DevBox nix-chroot environment indicator)' "$bashrc_file"; then
       local bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
       echo "Modifying ${bashrc_file} to remove Rootless-DevBox configurations."
