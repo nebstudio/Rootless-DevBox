@@ -470,9 +470,11 @@ EOF
 
     # shellcheck disable=2016
     if ! grep -qF 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' ~/.bashrc; then
-      echo '' >> ~/.bashrc
-      echo '# Added by Rootless-DevBox installer' >> ~/.bashrc
-      echo 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' >> ~/.bashrc
+      cat >> "${HOME}/.bashrc" <<EOF
+
+# Added by Rootless-DevBox installer
+export PATH="\$HOME/.local/bin:\$PATH" # Added by Rootless-DevBox
+EOF
       echo "Added ~/.local/bin to PATH in ~/.bashrc"
     fi
 
@@ -515,9 +517,11 @@ EOF
       local bashrc_modified_count=0
       # shellcheck disable=2016
       if ! grep -qF 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' ~/.bashrc; then
-        echo '' >> ~/.bashrc
-        echo '# Added by Rootless-DevBox installer' >> ~/.bashrc
-        echo 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' >> ~/.bashrc
+      cat >> "${HOME}/.bashrc" <<EOF
+
+# Added by Rootless-DevBox installer
+export PATH="\$HOME/.local/bin:\$PATH" # Added by Rootless-DevBox
+EOF
         echo "Added ~/.local/bin to PATH in ~/.bashrc"
         ((bashrc_modified_count++))
       else
