@@ -525,6 +525,7 @@ EOF
         echo "Added ~/.local/bin to PATH in ~/.bashrc"
         ((bashrc_modified_count++))
       else
+        # shellcheck disable=SC2088
         echo "~/.local/bin PATH entry by Rootless-DevBox already in ~/.bashrc."
       fi
 
@@ -539,6 +540,7 @@ EOF
         echo "Added nix-chroot environment indicator to ~/.bashrc"
         ((bashrc_modified_count++))
       else
+        # shellcheck disable=SC2088
         echo "nix-chroot environment indicator already in ~/.bashrc."
       fi
 
@@ -546,6 +548,7 @@ EOF
         print_success "Configuration changes applied to ~/.bashrc."
         echo "Please run 'source ~/.bashrc' or open a new terminal for these changes to take full effect."
       else
+        # shellcheck disable=SC2088
         print_success "~/.bashrc already contains the necessary configurations or no changes were made."
       fi
       echo ""
