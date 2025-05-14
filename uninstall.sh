@@ -13,7 +13,7 @@ BLUE="\033[0;34m"
 YELLOW="\033[0;33m"
 RED="\033[0;31m"
 RESET="\033[0m"
-GREY="\033[90m"
+# GREY="\033[90m"
 CYAN="\033[0;36m"
 
 # Echo with color
@@ -80,6 +80,7 @@ main() {
   local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
 
   # Check if any component is installed
+  # shellcheck disable=2016
   if [ ! -f "$devbox_path" ] && \
      [ ! -f "$nix_chroot_path" ] && \
      [ ! -f "$nix_user_chroot_path" ] && \
@@ -110,8 +111,10 @@ main() {
   if [ ! -f "$bashrc_file" ]; then
     print_warning "${bashrc_file} not found. Skipping .bashrc modifications."
   else
+    # shellcheck disable=SC2016
     if grep -qE '(# Added by Rootless-DevBox installer|export PATH="\$HOME/\.local/bin:\$PATH" # Added by Rootless-DevBox|# Rootless-DevBox nix-chroot environment indicator)' "$bashrc_file"; then
-      local bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
+      local bashrc_backup
+      bashrc_backup="${HOME}/.bashrc.devbox_uninstall_$(date +%Y%m%d%H%M%S).bak"
       echo "Modifying ${bashrc_file} to remove Rootless-DevBox configurations."
       echo "Backing up current ${bashrc_file} to ${bashrc_backup}"
       if cp "${bashrc_file}" "${bashrc_backup}"; then
