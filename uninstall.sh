@@ -80,6 +80,7 @@ main() {
   local nix_user_chroot_path="${local_bin_dir}/nix-user-chroot"
 
   # Check if any component is installed
+  # shellcheck disable=2016
   if [ ! -f "$devbox_path" ] && \
      [ ! -f "$nix_chroot_path" ] && \
      [ ! -f "$nix_user_chroot_path" ] && \

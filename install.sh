@@ -468,6 +468,7 @@ EOF
         print_error "${local_bin_dir}/nix-chroot not found or not executable. Please check previous steps."
     fi
 
+    # shellcheck disable=2016
     if ! grep -qF 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' ~/.bashrc; then
       echo '' >> ~/.bashrc
       echo '# Added by Rootless-DevBox installer' >> ~/.bashrc
@@ -512,6 +513,7 @@ EOF
       print_step "Configuring environment variables in ~/.bashrc"
 
       local bashrc_modified_count=0
+      # shellcheck disable=2016
       if ! grep -qF 'export PATH="$HOME/.local/bin:$PATH" # Added by Rootless-DevBox' ~/.bashrc; then
         echo '' >> ~/.bashrc
         echo '# Added by Rootless-DevBox installer' >> ~/.bashrc
